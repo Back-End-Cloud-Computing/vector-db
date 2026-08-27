@@ -15,15 +15,17 @@ WEIGHT_VIEWED_PRODUCTS = 0.25
 WEIGHT_CART = 0.25
 WEIGHT_SIMILAR_USERS = 0.15
 
+PRODUCTS_COLLECTION = "products"
+
 
 async def recommend_similar_products(product_id: str, limit: int = 10) -> list[RecommendationItem]:
     """Content-based recommendation: nearest neighbors of a product's own
     already-indexed embedding (never recomputed here)."""
-    embedding = await chromadb_client.get_embedding(product_id)
+    embedding = await chromadb_client.get_embedding(PRODUCTS_COLLECTION, product_id)
     if embedding is None:
         raise ProductVectorNotFoundError(product_id)
 
-    result = await chromadb_client.query_similar(embedding, n_results=limit + 1)
+    result = await chromadb_client.query_similar(PRODUCTS_COLLECTION, embedding, n_results=limit + 1)
     ids = result.get("ids", [[]])[0]
     distances = result.get("distances", [[]])[0]
 
@@ -95,5 +97,5 @@ async def _fallback_popular_products(limit: int) -> list[RecommendationItem]:
     """Cold-start fallback: with no behavioral signal at all (new/anonymous
     user, mocks returning empty data), surface arbitrary indexed products
     instead of an empty response."""
-    ids = await chromadb_client.peek_ids(limit)
+    ids = await chromadb_client.peek_ids(PRODUCTS_COLLECTION, limit)
     return [RecommendationItem(product_id=pid, score=0.0, reasons=["produto em destaque"]) for pid in ids]

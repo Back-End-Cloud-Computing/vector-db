@@ -21,7 +21,7 @@ def chroma_collection(monkeypatch):
     client.reset()
     collection = client.get_or_create_collection(name="products", metadata={"hnsw:space": "cosine"})
     monkeypatch.setattr(chromadb_client_module.chromadb_state, "client", client)
-    monkeypatch.setattr(chromadb_client_module.chromadb_state, "collection", collection)
+    monkeypatch.setattr(chromadb_client_module.chromadb_state, "collections", {"products": collection})
     yield collection
 
 

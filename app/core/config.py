@@ -14,7 +14,6 @@ class Settings(BaseSettings):
 
     chroma_host: str = "localhost"
     chroma_port: int = 8001
-    chroma_collection: str = "products"
 
 
 @lru_cache
