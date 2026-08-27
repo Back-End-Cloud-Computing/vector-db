@@ -46,3 +46,8 @@ class DeleteResponse(BaseModel):
 
 class CollectionsResponse(BaseModel):
     collections: list[str]
+
+
+class CountResponse(BaseModel):
+    collection_name: str
+    count: int

@@ -1,8 +1,9 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 
 from app.database import chromadb_client
 from app.schemas.vector import (
     CollectionsResponse,
+    CountResponse,
     DeleteRequest,
     DeleteResponse,
     InsertRequest,
@@ -19,6 +20,12 @@ router = APIRouter(prefix="/vector_db", tags=["vector_db"])
 async def list_collections() -> CollectionsResponse:
     collections = await chromadb_client.list_collections()
     return CollectionsResponse(collections=collections)
+
+
+@router.get("/count", response_model=CountResponse)
+async def count(collection_name: str = Query(..., min_length=1)) -> CountResponse:
+    total = await chromadb_client.count(collection_name)
+    return CountResponse(collection_name=collection_name, count=total)
 
 
 @router.post("/insert", response_model=InsertResponse)

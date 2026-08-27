@@ -67,6 +67,16 @@ async def list_collections() -> list[str]:
     return await asyncio.to_thread(_list)
 
 
+async def count(collection_name: str) -> int:
+    def _count() -> int:
+        try:
+            return get_collection(collection_name).count()
+        except Exception as exc:  # noqa: BLE001
+            raise VectorStoreError(f"Failed to count collection '{collection_name}': {exc}") from exc
+
+    return await asyncio.to_thread(_count)
+
+
 async def upsert_batch(
     collection_name: str,
     ids: list[str],
@@ -101,7 +111,10 @@ async def query_similar(
             return get_collection(collection_name).query(
                 query_embeddings=[embedding],
                 n_results=n_results,
-                where=where,
+                # Chroma rejects `where={}` ("Expected where to have exactly one
+                # operator, got {}") instead of treating it as no filter, so an
+                # empty dict is normalized to None here for every caller.
+                where=where or None,
             )
         except Exception as exc:  # noqa: BLE001
             raise VectorStoreError(f"Failed to query ChromaDB: {exc}") from exc
@@ -144,7 +157,11 @@ async def delete_vectors(
 ) -> None:
     def _delete() -> None:
         try:
-            get_collection(collection_name).delete(ids=ids, where=where)
+            # Same `where={}` normalization as query_similar. Chroma still
+            # refuses the call if both `ids` and `where` end up empty ("At
+            # least one of ids, where, or where_document must be provided"),
+            # so this can't turn into an accidental delete-everything.
+            get_collection(collection_name).delete(ids=ids, where=where or None)
         except Exception as exc:  # noqa: BLE001
             raise VectorStoreError(f"Failed to delete vectors: {exc}") from exc
 
