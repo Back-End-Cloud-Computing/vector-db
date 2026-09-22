@@ -1,0 +1,24 @@
+services:
+  vector-db:
+    build: ./vector-db
+    container_name: vector-db
+    restart: unless-stopped
+    ports:
+      - "8002:8002"
+    env_file:
+      - ./vector-db/.env
+    depends_on:
+      - chromadb
+    networks:
+      - ganjj-net
+
+  chromadb:
+    image: chromadb/chroma:0.5.20
+    container_name: vector-db-chromadb
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    networks:
+      - ganjj-net
