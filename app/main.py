@@ -1,11 +1,12 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from app.core.config import get_settings
-from app.core.exceptions import ProductVectorNotFoundError, VectorStoreError
+from app.core.exceptions import AuthenticationError, ProductVectorNotFoundError, VectorStoreError
 from app.core.logging import configure_logging
+from app.core.security import get_current_user, load_public_key
 from app.database import chromadb_client
 from app.routes import api_router
 
@@ -14,6 +15,7 @@ from app.routes import api_router
 async def lifespan(app: FastAPI):
     configure_logging()
     chromadb_client.connect_to_chromadb()
+    await load_public_key()
     yield
 
 
@@ -30,7 +32,11 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    application.include_router(api_router)
+    application.include_router(api_router, dependencies=[Depends(get_current_user)])
+
+    @application.exception_handler(AuthenticationError)
+    async def authentication_error_handler(request: Request, exc: AuthenticationError) -> JSONResponse:
+        return JSONResponse(status_code=401, content={"detail": str(exc), "error_type": "authentication_error"})
 
     @application.exception_handler(VectorStoreError)
     async def vector_store_error_handler(request: Request, exc: VectorStoreError) -> JSONResponse:

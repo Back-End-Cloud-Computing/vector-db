@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     app_env: str = "development"
     log_level: str = "INFO"
 
+    auth_service_base_url: str = "http://localhost:8081"
+
     chroma_host: str = "localhost"
     chroma_port: int = 8001
 
