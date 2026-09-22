@@ -78,6 +78,31 @@ kubectl apply -f k8s/vector-db.yaml
 kubectl port-forward service/vector-db 8002:8002
 ```
 
+## Acessar via Ingress (sem port-forward por serviço)
+
+```bash
+minikube addons enable ingress
+kubectl apply -f k8s/ingress.yaml
+kubectl wait --namespace ingress-nginx --for=condition=ready pod \
+  --selector=app.kubernetes.io/component=controller --timeout=120s
+```
+
+```bash
+IP=$(minikube ip)
+PORT=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.spec.ports[?(@.port==80)].nodePort}')
+curl -H "Host: vector-db.ganjj.local" http://$IP:$PORT/docs
+```
+
+**No WSL2**: encaminhe uma porta só, para o Ingress Controller (não para o
+`vector-db` diretamente):
+
+```bash
+kubectl port-forward -n ingress-nginx service/ingress-nginx-controller 8080:80
+```
+
+Hosts do Windows: `127.0.0.1  vector-db.ganjj.local`. Navegador:
+http://vector-db.ganjj.local:8080/docs
+
 ## Sobre a imagem
 
 Publicada em [joao2006/vector-db](https://hub.docker.com/r/joao2006/vector-db).

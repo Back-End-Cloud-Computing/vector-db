@@ -1,0 +1,24 @@
+# Entrada HTTP externa para o vector-db.
+#
+# Mesmo padrão do authorization/k8s/ingress.yaml: roteamento por HOST (não por
+# path), então /vector_db/*, /docs, /health etc. continuam funcionando sem
+# prefixo, do jeito que o código já espera.
+#
+# O Ingress aponta para o SERVICE, nunca para um Pod.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: vector-db-ingress
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: vector-db.ganjj.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: vector-db
+                port:
+                  number: 8002
