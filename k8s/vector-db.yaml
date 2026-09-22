@@ -1,0 +1,68 @@
+# vector-db no Kubernetes.
+#
+# Troque "joao2006" pela sua conta do Docker Hub se for publicar sob outra,
+# ou use a imagem local se o cluster compartilhar o daemon do Docker (caso do
+# OrbStack/minikube com driver docker).
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vector-db
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: vector-db
+  template:
+    metadata:
+      labels:
+        app: vector-db
+    spec:
+      containers:
+        - name: vector-db
+          image: joao2006/vector-db:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8002
+          env:
+            # Dependencias pelo NOME DO SERVICE, nunca pelo IP do Pod.
+            - name: CHROMA_HOST
+              value: chromadb
+            - name: CHROMA_PORT
+              value: "8000"
+            - name: AUTH_SERVICE_BASE_URL
+              value: http://authorization:8081
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8002
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8002
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+
+---
+# Endereco estavel do vector-db. product-service e embedding-reranking chamam
+# "http://vector-db:8002" e nunca precisam saber quantos Pods existem.
+apiVersion: v1
+kind: Service
+metadata:
+  name: vector-db
+spec:
+  type: ClusterIP
+  selector:
+    app: vector-db
+  ports:
+    - port: 8002
+      targetPort: 8002
