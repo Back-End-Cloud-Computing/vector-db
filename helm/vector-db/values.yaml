@@ -1,0 +1,29 @@
+image:
+  repository: joao2006/vector-db
+  tag: ""            # vazio usa o appVersion do Chart.yaml
+  pullPolicy: IfNotPresent
+
+replicaCount: 3
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+# Variáveis não sensíveis, iguais às do k8s/vector-db.yaml. Este serviço não
+# tem segredo próprio: valida o JWT com a chave pública do authorization.
+config:
+  APP_ENV: production
+  LOG_LEVEL: INFO
+  AUTH_SERVICE_BASE_URL: http://authorization:8081
+  CHROMA_HOST: chromadb
+  CHROMA_PORT: "8000"
+
+# Com enabled=false o chart só sobe o vector-db e config.CHROMA_HOST aponta
+# para um ChromaDB externo.
+chromadb:
+  enabled: true
+  image: chromadb/chroma:0.5.20

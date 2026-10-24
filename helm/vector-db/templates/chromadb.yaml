@@ -1,0 +1,48 @@
+{{- if .Values.chromadb.enabled }}
+# Uma réplica só, sem volume persistente: se o Pod for recriado os vetores se
+# perdem (o product reindexa). Mesmo desenho do k8s/chromadb.yaml.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chromadb
+  labels:
+    app: chromadb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chromadb
+  template:
+    metadata:
+      labels:
+        app: chromadb
+    spec:
+      containers:
+        - name: chromadb
+          image: {{ .Values.chromadb.image }}
+          ports:
+            - containerPort: 8000
+          readinessProbe:
+            httpGet:
+              path: /api/v1/heartbeat
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chromadb
+spec:
+  type: ClusterIP
+  selector:
+    app: chromadb
+  ports:
+    - port: 8000
+      targetPort: 8000
+{{- end }}

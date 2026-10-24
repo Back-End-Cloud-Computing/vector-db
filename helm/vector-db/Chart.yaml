@@ -1,0 +1,6 @@
+apiVersion: v2
+name: vector-db
+description: Banco vetorial do GANJJ (FastAPI + ChromaDB), serviço interno sem Ingress
+type: application
+version: 0.1.0
+appVersion: "1.1.0"

@@ -1,0 +1,12 @@
+# Só ClusterIP: o product chama vector-db:8002 de dentro do cluster. Sem Ingress.
+apiVersion: v1
+kind: Service
+metadata:
+  name: vector-db
+spec:
+  type: ClusterIP
+  selector:
+    app: vector-db
+  ports:
+    - port: 8002
+      targetPort: 8002

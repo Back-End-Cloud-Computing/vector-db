@@ -1,0 +1,4 @@
+O vector-db busca a chave pública no authorization ao subir: instale-o antes.
+Serviço interno, sem Ingress. Teste:
+  kubectl port-forward svc/vector-db 8002:8002
+  curl localhost:8002/health

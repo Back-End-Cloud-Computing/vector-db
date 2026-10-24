@@ -1,0 +1,46 @@
+{{- $image := printf "%s:%s" .Values.image.repository (default .Chart.AppVersion .Values.image.tag) }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vector-db
+  labels:
+    app: vector-db
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: vector-db
+  template:
+    metadata:
+      labels:
+        app: vector-db
+      annotations:
+        # O ConfigMap muda => novo hash => os pods reiniciam com a config nova.
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8002"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: vector-db
+          image: {{ $image }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 8002
+          envFrom:
+            - configMapRef:
+                name: vector-db-config
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8002
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8002
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
