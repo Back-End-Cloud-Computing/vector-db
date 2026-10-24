@@ -3,6 +3,7 @@ import logging
 from typing import Any
 
 import chromadb
+import tenacity
 
 from app.core.config import get_settings
 from app.core.exceptions import VectorStoreError
@@ -29,9 +30,34 @@ class ChromaDBState:
 chromadb_state = ChromaDBState()
 
 
+def _log_connect_retry(retry_state: tenacity.RetryCallState) -> None:
+    settings = get_settings()
+    logger.warning(
+        "ChromaDB at %s:%s not ready yet (attempt %s), retrying...",
+        settings.chroma_host,
+        settings.chroma_port,
+        retry_state.attempt_number,
+    )
+
+
+# `HttpClient` heartbeats the server on construction and raises ValueError
+# ("Could not connect to a Chroma server") while Chroma is still starting -
+# common right after `docker compose up` or a pod reschedule. Retrying here
+# for up to 60s lets the service wait for it instead of exiting at startup.
+@tenacity.retry(
+    retry=tenacity.retry_if_exception_type(ValueError),
+    stop=tenacity.stop_after_delay(60),
+    wait=tenacity.wait_fixed(2),
+    before_sleep=_log_connect_retry,
+    reraise=True,
+)
+def _create_client(host: str, port: int) -> Any:
+    return chromadb.HttpClient(host=host, port=port)
+
+
 def connect_to_chromadb() -> None:
     settings = get_settings()
-    chromadb_state.client = chromadb.HttpClient(host=settings.chroma_host, port=settings.chroma_port)
+    chromadb_state.client = _create_client(settings.chroma_host, settings.chroma_port)
     logger.info("Connected to ChromaDB at %s:%s", settings.chroma_host, settings.chroma_port)
 
 

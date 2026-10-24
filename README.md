@@ -45,5 +45,26 @@ cp .env.example .env
 .venv/bin/uvicorn app.main:app --reload --port 8002
 ```
 
-Requer um ChromaDB acessivel (`CHROMA_HOST`/`CHROMA_PORT`), tipicamente via
-`docker-compose.yml` na raiz do projeto.
+Requer um ChromaDB acessivel (`CHROMA_HOST`/`CHROMA_PORT`) e o
+`authorization` no ar (a chave publica e buscada no startup).
+
+## Rodando com Docker
+
+A partir de um clone isolado deste repositorio:
+
+```bash
+cp .env.example .env
+docker compose up -d
+```
+
+O `docker-compose.yml` constroi o vector-db do codigo local e sobe o que ele
+precisa: ChromaDB e o `authorization` (+ Oracle, construido direto do
+repositorio no GitHub). O primeiro `up` leva alguns minutos: o Oracle precisa
+inicializar e o `authorization` e compilado.
+
+- API: `http://localhost:8002` (docs em `/docs`)
+- Tokens: `POST http://localhost:8081/auth/login` (admin padrao `admin@ganjj.com` / `adminSegura123`)
+
+Ao subir, o vector-db espera o ChromaDB responder (ate 60 s, tentando a cada
+2 s) em vez de encerrar com `Could not connect to a Chroma server`; no
+compose ele tambem so sobe depois do healthcheck do Chroma.

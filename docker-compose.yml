@@ -1,24 +1,90 @@
+# Sobe o vector-db com tudo de que ele depende, a partir de um clone isolado
+# deste repositório:
+#
+#   cp .env.example .env
+#   docker compose up -d
+#
+# O vector-db é construído do código local. O authorization (que emite e
+# assina os tokens) é construído direto do repositório no GitHub, porque a
+# imagem publicada dele só existe para arm64; sem JWT_*_KEY_PATH ele gera um
+# par RSA temporário a cada subida (só para desenvolvimento).
+#
+# Ordem de subida: oracle-auth -> authorization e chromadb -> vector-db. O
+# vector-db busca a chave pública no authorization e conecta no Chroma ao
+# subir, por isso espera os dois ficarem healthy.
+
 services:
   vector-db:
-    build: ./vector-db
-    container_name: vector-db
+    build: .
     restart: unless-stopped
     ports:
       - "8002:8002"
     env_file:
-      - ./vector-db/.env
+      - .env
     depends_on:
-      - chromadb
-    networks:
-      - ganjj-net
+      chromadb:
+        condition: service_healthy
+      authorization:
+        condition: service_healthy
 
   chromadb:
     image: chromadb/chroma:0.5.20
-    container_name: vector-db-chromadb
     restart: unless-stopped
     ports:
       - "8001:8000"
     volumes:
       - chroma_data:/chroma/chroma
-    networks:
-      - ganjj-net
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  # --- authorization: emite os tokens (login em http://localhost:8081) ---
+  oracle-auth:
+    image: gvenzl/oracle-free:23-slim
+    restart: unless-stopped
+    environment:
+      ORACLE_PASSWORD: oracle
+      APP_USER: ganjj_auth
+      APP_USER_PASSWORD: ganjj_auth
+    volumes:
+      - oracle_auth_data:/opt/oracle/oradata
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+  authorization:
+    build: https://github.com/Back-End-Cloud-Computing/authorization.git#main
+    restart: unless-stopped
+    depends_on:
+      oracle-auth:
+        condition: service_healthy
+    environment:
+      SERVER_PORT: 8081
+      DB_HOST: oracle-auth
+      DB_PORT: 1521
+      DB_NAME: FREEPDB1
+      DB_USER: ganjj_auth
+      DB_PASSWORD: ganjj_auth
+      JPA_DDL_AUTO: update
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@ganjj.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-adminSegura123}
+    ports:
+      - "8081:8081"
+    healthcheck:
+      # A imagem não tem curl: faz o GET pelo /dev/tcp do bash e só considera
+      # pronto quando /auth/public-key responde 200.
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8081 && printf 'GET /auth/public-key HTTP/1.0\\r\\n\\r\\n' >&3 && head -1 <&3 | grep -q ' 200 '"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+volumes:
+  chroma_data:
+  oracle_auth_data:
