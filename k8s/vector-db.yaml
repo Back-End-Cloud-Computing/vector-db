@@ -25,7 +25,7 @@ spec:
     spec:
       containers:
         - name: vector-db
-          image: joao2006/vector-db:1.0.0
+          image: joao2006/vector-db:1.1.0
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8002
