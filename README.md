@@ -28,6 +28,7 @@ Este servico **nunca gera embeddings**: recebe vetores prontos do
 - `GET /vector_db/recommendations/products/{product_id}/similar`
 - `GET /vector_db/recommendations/users/{user_id}`
 - `GET /health`
+- `GET /metrics` — métricas Prometheus (requisições, erros e latência por rota); sem token.
 
 As respostas de recomendacao trazem apenas `product_id` + `score` + `reasons`
 (sem dados completos do produto), ja que este servico nao tem acesso ao

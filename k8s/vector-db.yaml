@@ -17,6 +17,11 @@ spec:
     metadata:
       labels:
         app: vector-db
+      # Prometheus descobre o pod por estas anotacoes e raspa /metrics direto nele.
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8002"
+        prometheus.io/path: "/metrics"
     spec:
       containers:
         - name: vector-db
